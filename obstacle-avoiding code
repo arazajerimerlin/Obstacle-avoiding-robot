@@ -1,0 +1,140 @@
+#include <Servo.h>
+
+Servo scanServo;
+
+// Ultrasonic pins
+const int trigPin = A1;
+const int echoPin = A2;
+
+// Motor driver pins
+const int in1 = 2;
+const int in2 = 3;
+const int in3 = 4;
+const int in4 = 5;
+const int enA = 9;
+const int enB = 6;
+
+const int SAFE_DISTANCE = 20;
+
+void setup() {
+  Serial.begin(9600);
+
+  // Motor pins
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(in3, OUTPUT);
+  pinMode(in4, OUTPUT);
+  pinMode(enA, OUTPUT);
+  pinMode(enB, OUTPUT);
+
+  // Ultrasonic pins
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  // Attach continuous servo
+  scanServo.attach(8); // Adjust pin if needed
+  scanServo.write(90); // Stop rotation
+}
+
+void loop() {
+  int distance = getDistance();
+
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  if (distance > SAFE_DISTANCE) {
+    moveForward();
+  } else {
+    stopMoving();
+    delay(300);
+
+    // Rotate servo to look left/right
+    Serial.println("Scanning left...");
+    scanServo.write(0);  // Rotate left
+    delay(500);
+    scanServo.write(90); // Stop
+    int left = getDistance();
+    delay(300);
+
+    Serial.println("Scanning right...");
+    scanServo.write(180); // Rotate right
+    delay(500);
+    scanServo.write(90);  // Stop
+    int right = getDistance();
+    delay(300);
+
+    if (left > right && left > SAFE_DISTANCE) {
+      turnLeft();
+    } else if (right > SAFE_DISTANCE) {
+      turnRight();
+    } else {
+      moveBackward();
+      delay(600);
+      turnLeft();
+    }
+  }
+
+  delay(100);
+}
+
+// ------------------- FUNCTIONS -------------------
+
+int getDistance() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH);
+  int distance = duration * 0.034 / 2;
+  return distance;
+}
+
+void moveForward() {
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, HIGH);
+  digitalWrite(in4, LOW);
+  analogWrite(enA, 180);
+  analogWrite(enB, 180);
+}
+
+void moveBackward() {
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, HIGH);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, HIGH);
+  analogWrite(enA, 180);
+  analogWrite(enB, 180);
+}
+
+void turnLeft() {
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, HIGH);
+  digitalWrite(in3, HIGH);
+  digitalWrite(in4, LOW);
+  analogWrite(enA, 180);
+  analogWrite(enB, 180);
+  delay(400);
+  stopMoving();
+}
+
+void turnRight() {
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, HIGH);
+  analogWrite(enA, 180);
+  analogWrite(enB, 180);
+  delay(400);
+  stopMoving();
+}
+
+void stopMoving() {
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, LOW);
+}
